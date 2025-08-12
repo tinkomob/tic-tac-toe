@@ -3,111 +3,414 @@
 
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tic-Tac-Toe</title>
-  <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.5.2/animate.css'>
   <link rel="stylesheet" href="css/style.css">
-  <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css'>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/prefixfree/1.0.7/prefixfree.min.js"></script>
-
 </head>
 
 <body>
-  <script type="text/x-template" id="markerSelect">
-  		<div class="modal-mask">
-  			<div class="modal-wrapper">
-  				<div class="modal-container">
-  					<div class="modal-body">
-  						<slot name="body">
-  							<div class='row'>
-  								<div class="col-xs-2 select_marker"
-  										 @click='set("X")'><span>X</span></div>
-  								<div class="col-xs-8 select_title">
-  									ВЫБЕРИТЕ<span style='color:#00B16A'>МАРКЕР</span>
-  								</div>
-  								<div class="col-xs-2 select_marker"
-  										 @click='set("O")'>O</div>
-  							</div>
-  						</slot>
-  					</div>
-  				</div>
-  			</div>
-  		</div>
-  </script>
-  <script type="text/x-template" id="usernamesInput">
-  		<div class="modal-mask">
-  			<div class="modal-wrapper">
-  				<div class="modal-container">
-  					<div class="modal-body">
-  						<slot name="body">
-  							<div class='row'>
-  								<div class="col-xs-6 select_marker"
-                       ><span>X</span>
-                      <br>
-                    <input type="text" v-model="players.playerX">
-                   </div>
-  								<div class="col-xs-6 select_marker"
-                       >O <br>
-                       <input type="text" v-model="players.playerO">
-                  </div>
-                </div>
-                <div class="row">
-                  <button @click='start_duel_game()'>НАЧАТЬ ИГРУ</button>
-                </div>
-  						</slot>
-  					</div>
-  				</div>
-  			</div>
-  		</div>
-  </script>
-
   <div id='app'>
-    <modal v-if='showModal'></modal>
-    <user v-if='showUserModal'></user>
-
-    <div id='welcome' v-if='!started'>
+    <div id='welcome'>
       <div class='titleBlock'>
         <h1>tic<span>tac</span>toe</h1>
-        <div class="grid_option">РАЗМЕР ПОЛЯ: <input type="number" v-model="GRID_SIZE"></div>
+        <div class="grid_option">GRID SIZE: <input type="number" id="gridSize" value="3" min="3" max="10"></div>
 
-        <div class='row mode' @click='showUserModal = true'>
-          [против<span>игрока</span>]
+        <div class='row mode' onclick='startPlayerGame()'>
+          [vs <span>Player</span>]
         </div>
-        <div class='row mode' @click='showModal = true'>
-          [против<span>компьютера</span>]
+        <div class='row mode' onclick='showMarkerSelect()'>
+          [vs <span>Computer</span>]
         </div>
       </div>
     </div>
 
-    <div id='main' v-if='started && !game.over'>
-      <h3 style="text-align: center; font-size: 40px;">ХОД: {{turn}}</h3> <br>
-      <table id='board'>
-        <tr v-for='row in board'>
-          <td v-for='box in row'>
-            <div class='square' @click='router(box)' :class='{"square active": box.bg}'>
-              {{box.val}}
+    <div id='markerModal' class="modal-mask" style="display: none;">
+      <div class="modal-wrapper">
+        <div class="modal-container">
+          <div class="modal-body">
+            <div class='row'>
+              <div class="col-xs-2 select_marker" onclick='startComputerGame("X")'>
+                <span>X</span>
+              </div>
+              <div class="col-xs-8 select_title">
+                CHOOSE YOUR<br><span style='color:#00D4AA'>MARKER</span>
+              </div>
+              <div class="col-xs-2 select_marker" onclick='startComputerGame("O")'>
+                O
+              </div>
             </div>
-          </td>
-        </tr>
-      </table>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <div id='reset' v-if='started && game.over'>
-      <div class='titleBlock'>
-        <h1 v-if='!game.draw'><span>{{game.winner}}</span> побеждает!</h1>
-        <h1 v-if='game.draw'><span>ничья</span></h1>
-        <h2>сыграть снова?</h2>
-        <div class='row mode' @click='init("player")'>
-          [против<span>игрока</span>]
+    <div id='userModal' class="modal-mask" style="display: none;">
+      <div class="modal-wrapper">
+        <div class="modal-container">
+          <div class="modal-body">
+            <div class='row'>
+              <div class="col-xs-6 select_marker">
+                <span>X</span><br>
+                <input type="text" id="playerX" placeholder="Player X" value="Player X">
+              </div>
+              <div class="col-xs-6 select_marker">
+                O<br>
+                <input type="text" id="playerO" placeholder="Player O" value="Player O">
+              </div>
+            </div>
+            <div class="row">
+              <button onclick='startDuelGame()'>START GAME</button>
+            </div>
+          </div>
         </div>
-        <div class='row mode' @click='showModal = true'>
-          [против<span>компьютера</span>]
+      </div>
+    </div>
+
+    <div id='main' style='display: none;'>
+      <h3 id='turnIndicator'>Current Turn: X</h3>
+      <table id='board'></table>
+    </div>
+
+    <div id='reset' style='display: none;'>
+      <div class='titleBlock'>
+        <h1 id='winnerText'><span>X</span> Wins!</h1>
+        <h2>Play Again?</h2>
+        <div class='row mode' onclick='resetGame(); startPlayerGame()'>
+          [vs <span>Player</span>]
+        </div>
+        <div class='row mode' onclick='resetGame(); showMarkerSelect()'>
+          [vs <span>Computer</span>]
         </div>
       </div>
     </div>
   </div>
-  <script src='https://cdnjs.cloudflare.com/ajax/libs/vue/2.0.1/vue.min.js'></script>
-  <script src="js/script.js"></script>
-  <script src="js/board.js"></script>
+
+  <script>
+    let gameState = {
+      board: [],
+      gridSize: 3,
+      currentTurn: 'X',
+      gameMode: '', // 'player' or 'computer'
+      playerMarker: 'X',
+      computerMarker: 'O',
+      gameOver: false,
+      winner: null,
+      isDraw: false,
+      playerNames: { X: 'Player X', O: 'Player O' }
+    };
+
+    function showMarkerSelect() {
+      document.getElementById('markerModal').style.display = 'block';
+    }
+
+    function showUserModal() {
+      document.getElementById('userModal').style.display = 'block';
+    }
+
+    function hideModals() {
+      document.getElementById('markerModal').style.display = 'none';
+      document.getElementById('userModal').style.display = 'none';
+    }
+
+    function startPlayerGame() {
+      hideModals();
+      gameState.gameMode = 'player';
+      gameState.gridSize = parseInt(document.getElementById('gridSize').value) || 3;
+      showUserModal();
+    }
+
+    function startDuelGame() {
+      gameState.playerNames.X = document.getElementById('playerX').value || 'Player X';
+      gameState.playerNames.O = document.getElementById('playerO').value || 'Player O';
+      initGame();
+    }
+
+    function startComputerGame(playerMarker) {
+      hideModals();
+      gameState.gameMode = 'computer';
+      gameState.playerMarker = playerMarker;
+      gameState.computerMarker = playerMarker === 'X' ? 'O' : 'X';
+      gameState.currentTurn = 'X';
+      gameState.gridSize = parseInt(document.getElementById('gridSize').value) || 3;
+      gameState.playerNames.X = playerMarker === 'X' ? 'You' : 'Computer';
+      gameState.playerNames.O = playerMarker === 'O' ? 'You' : 'Computer';
+      initGame();
+    }
+
+    function initGame() {
+      hideModals();
+      gameState.gameOver = false;
+      gameState.winner = null;
+      gameState.isDraw = false;
+      gameState.currentTurn = 'X';
+      
+      // Initialize board
+      gameState.board = [];
+      for (let i = 0; i < gameState.gridSize; i++) {
+        gameState.board[i] = [];
+        for (let j = 0; j < gameState.gridSize; j++) {
+          gameState.board[i][j] = { val: '', bg: false, row: i, col: j };
+        }
+      }
+
+      createBoard();
+      updateDisplay();
+      
+      document.getElementById('welcome').style.display = 'none';
+      document.getElementById('main').style.display = 'block';
+      document.getElementById('reset').style.display = 'none';
+    }
+
+    function createBoard() {
+      const boardEl = document.getElementById('board');
+      boardEl.innerHTML = '';
+      
+      for (let i = 0; i < gameState.gridSize; i++) {
+        const row = document.createElement('tr');
+        for (let j = 0; j < gameState.gridSize; j++) {
+          const cell = document.createElement('td');
+          const square = document.createElement('div');
+          square.className = 'square';
+          square.onclick = () => makeMove(i, j);
+          square.id = `cell-${i}-${j}`;
+          cell.appendChild(square);
+          row.appendChild(cell);
+        }
+        boardEl.appendChild(row);
+      }
+    }
+
+    function makeMove(row, col) {
+      if (gameState.gameOver || gameState.board[row][col].val !== '') {
+        return;
+      }
+
+      // Make player move
+      gameState.board[row][col].val = gameState.currentTurn;
+      updateSquare(row, col);
+      
+      if (checkWin()) {
+        endGame();
+        return;
+      }
+
+      // Switch turns
+      gameState.currentTurn = gameState.currentTurn === 'X' ? 'O' : 'X';
+      updateDisplay();
+
+      // Computer move if needed
+      if (gameState.gameMode === 'computer' && gameState.currentTurn === gameState.computerMarker) {
+        setTimeout(makeComputerMove, 500);
+      }
+    }
+
+    function makeComputerMove() {
+      if (gameState.gameOver) return;
+
+      // Simple AI: try to win, then block, then random
+      let move = findWinningMove(gameState.computerMarker) || 
+                 findWinningMove(gameState.playerMarker) || 
+                 findRandomMove();
+
+      if (move) {
+        gameState.board[move.row][move.col].val = gameState.currentTurn;
+        updateSquare(move.row, move.col);
+        
+        if (checkWin()) {
+          endGame();
+          return;
+        }
+
+        gameState.currentTurn = gameState.currentTurn === 'X' ? 'O' : 'X';
+        updateDisplay();
+      }
+    }
+
+    function findWinningMove(marker) {
+      // Check all possible moves for a winning combination
+      for (let i = 0; i < gameState.gridSize; i++) {
+        for (let j = 0; j < gameState.gridSize; j++) {
+          if (gameState.board[i][j].val === '') {
+            // Try this move
+            gameState.board[i][j].val = marker;
+            if (checkWinForMarker(marker)) {
+              gameState.board[i][j].val = ''; // Undo
+              return { row: i, col: j };
+            }
+            gameState.board[i][j].val = ''; // Undo
+          }
+        }
+      }
+      return null;
+    }
+
+    function findRandomMove() {
+      const emptyCells = [];
+      for (let i = 0; i < gameState.gridSize; i++) {
+        for (let j = 0; j < gameState.gridSize; j++) {
+          if (gameState.board[i][j].val === '') {
+            emptyCells.push({ row: i, col: j });
+          }
+        }
+      }
+      return emptyCells.length > 0 ? emptyCells[Math.floor(Math.random() * emptyCells.length)] : null;
+    }
+
+    function updateSquare(row, col) {
+      const square = document.getElementById(`cell-${row}-${col}`);
+      if (square) {
+        square.textContent = gameState.board[row][col].val;
+        if (gameState.board[row][col].bg) {
+          square.classList.add('active');
+        }
+      }
+    }
+
+    function updateDisplay() {
+      const turnIndicator = document.getElementById('turnIndicator');
+      const currentPlayerName = gameState.playerNames[gameState.currentTurn];
+      turnIndicator.textContent = `Current Turn: ${currentPlayerName} (${gameState.currentTurn})`;
+    }
+
+    function checkWin() {
+      return checkWinForMarker('X') || checkWinForMarker('O') || checkDraw();
+    }
+
+    function checkWinForMarker(marker) {
+      const size = gameState.gridSize;
+      const board = gameState.board;
+
+      // Check rows
+      for (let i = 0; i < size; i++) {
+        let count = 0;
+        const winningCells = [];
+        for (let j = 0; j < size; j++) {
+          if (board[i][j].val === marker) {
+            count++;
+            winningCells.push({ row: i, col: j });
+          }
+        }
+        if (count === size) {
+          highlightWinningCells(winningCells);
+          gameState.winner = marker;
+          return true;
+        }
+      }
+
+      // Check columns
+      for (let j = 0; j < size; j++) {
+        let count = 0;
+        const winningCells = [];
+        for (let i = 0; i < size; i++) {
+          if (board[i][j].val === marker) {
+            count++;
+            winningCells.push({ row: i, col: j });
+          }
+        }
+        if (count === size) {
+          highlightWinningCells(winningCells);
+          gameState.winner = marker;
+          return true;
+        }
+      }
+
+      // Check main diagonal
+      let count = 0;
+      let winningCells = [];
+      for (let i = 0; i < size; i++) {
+        if (board[i][i].val === marker) {
+          count++;
+          winningCells.push({ row: i, col: i });
+        }
+      }
+      if (count === size) {
+        highlightWinningCells(winningCells);
+        gameState.winner = marker;
+        return true;
+      }
+
+      // Check anti-diagonal
+      count = 0;
+      winningCells = [];
+      for (let i = 0; i < size; i++) {
+        if (board[i][size - 1 - i].val === marker) {
+          count++;
+          winningCells.push({ row: i, col: size - 1 - i });
+        }
+      }
+      if (count === size) {
+        highlightWinningCells(winningCells);
+        gameState.winner = marker;
+        return true;
+      }
+
+      return false;
+    }
+
+    function checkDraw() {
+      for (let i = 0; i < gameState.gridSize; i++) {
+        for (let j = 0; j < gameState.gridSize; j++) {
+          if (gameState.board[i][j].val === '') {
+            return false;
+          }
+        }
+      }
+      gameState.isDraw = true;
+      return true;
+    }
+
+    function highlightWinningCells(cells) {
+      cells.forEach(cell => {
+        gameState.board[cell.row][cell.col].bg = true;
+        const square = document.getElementById(`cell-${cell.row}-${cell.col}`);
+        if (square) {
+          square.classList.add('active');
+        }
+      });
+    }
+
+    function endGame() {
+      gameState.gameOver = true;
+      
+      setTimeout(() => {
+        document.getElementById('main').style.display = 'none';
+        document.getElementById('reset').style.display = 'block';
+        
+        const winnerText = document.getElementById('winnerText');
+        if (gameState.isDraw) {
+          winnerText.innerHTML = '<span>Draw!</span>';
+        } else {
+          const winnerName = gameState.playerNames[gameState.winner];
+          winnerText.innerHTML = `<span>${winnerName} (${gameState.winner})</span> Wins!`;
+        }
+      }, 1000);
+    }
+
+    function resetGame() {
+      document.getElementById('welcome').style.display = 'block';
+      document.getElementById('main').style.display = 'none';
+      document.getElementById('reset').style.display = 'none';
+      hideModals();
+      
+      gameState = {
+        board: [],
+        gridSize: 3,
+        currentTurn: 'X',
+        gameMode: '',
+        playerMarker: 'X',
+        computerMarker: 'O',
+        gameOver: false,
+        winner: null,
+        isDraw: false,
+        playerNames: { X: 'Player X', O: 'Player O' }
+      };
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+      document.getElementById('welcome').style.display = 'block';
+    });
+  </script>
 </body>
 
 </html>
